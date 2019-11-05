@@ -1,0 +1,1748 @@
+7.1 - 7.3 Routed Anecdotes
+import React, { useState } from 'react'
+import ReactDOM from 'react-dom'
+import {
+  BrowserRouter as Router,
+  Route, Link, Redirect, withRouter
+} from 'react-router-dom'
+
+
+
+const Notification = (props) => {
+	return(
+		<div>
+			<b>{props.noti}</b>
+		</div>
+	)
+}
+	
+const Anecdotes = (props) => {
+	return(
+		<div>
+			<ul>
+				{props.anecdotes.map(a =>
+					<li key = {a.id}>
+						<Link to = {`/anecdotes/${a.id}`}>{a.content}</Link>
+					</li>
+				)}
+			</ul>
+		</div>
+	)
+}
+
+const Anecdote = ( {anecdote} ) => {
+	return(
+		<div>
+			<h2>{anecdote.content}</h2>
+			<p>{anecdote.important ? 'important' : ''}</p>
+		</div>
+	)
+}
+
+const CreateNew = (props) => {
+	const [ content, setContent ] = useState('')
+
+	const generateId = () => {
+		const max = props.anecdotes.length === 0
+		? 1 
+		: props.anecdotes.length + 1
+		return max
+	}
+
+	const handleAdd = (event) => {
+		event.preventDefault()
+
+		const newObject = {
+			content,
+			important: Math.random() > 0.5,
+			id: generateId()
+		}
+		
+		props.setAnecdotes(props.anecdotes.concat(newObject))
+		setContent('')
+		props.setNoti(`a new anecdote: ${newObject.content} added`)
+		setTimeout(() => props.setNoti(null), 10000)
+	}
+
+	const handleChange = (event) => setContent(event.target.value)
+
+	return(
+		<div>
+		<br />
+		<br />
+			<form onSubmit = {handleAdd}>
+				New Content: <input type = 'text' value = {content} onChange = {handleChange} />
+				<br />
+				<br />
+				<button type = 'submit'>Create</button>
+			</form>
+		</div>
+	)
+}
+
+const LoginwithHistory = (props) => {
+	const handleLogin = (event) => {
+		event.preventDefault()
+		props.onLogin('daisy')
+		props.history.push('/')
+	}
+	
+	return(
+		<div>
+			<h2>Login</h2>
+			<form onSubmit = {handleLogin}>
+				username: <input />
+				<br />
+				<br />
+				password: <input /> 
+				<br />
+				<br />
+				<button type = 'submit'>Login</button>
+			</form>
+		</div>
+	)
+}
+
+const Login = withRouter(LoginwithHistory)
+
+
+
+const App = () => {
+	const [ anecdotes, setAnecdotes ] = useState([  
+		{
+			content: 'reducer defines how redux store works',
+			important: true,
+			id: 1,
+		},
+		{
+			content: 'state of store can contain any data',
+			important: false,
+			id: 2,
+		},
+		{
+			content: 'JavaScript rules',
+			important: false,
+			id: 3,
+		}
+  ])
+  
+	const [ user, setUser ] = useState(null)
+	const [ noti, setNoti ] = useState(null)
+	
+	
+	const anecdoteById = (id) => {
+		const anecdote = anecdotes.find(a => a.id === Number(id))
+		return anecdote
+	}
+		
+	const onLogin = (user) => setUser(user)
+	
+	return(
+		<div>
+			<h1>Software Anecdotes</h1>
+			
+			<Router>
+				<div>
+					<Link to = '/'>anecdotes</Link>&nbsp;&nbsp;&nbsp;
+					<Link to = '/create'>create new</Link>&nbsp;&nbsp;&nbsp;
+					<Link to = 'login'>login</Link>
+				</div>
+				
+				<Notification noti = {noti} setNoti = {setNoti} />
+				
+				<Route exact path = '/' render = {() => <Anecdotes anecdotes = {anecdotes} />} />
+				<Route exact path = '/anecdotes/:id' render = {({ match }) => <Anecdote anecdote = {anecdoteById(match.params.id)} />} />
+				<Route path = '/create' render = {() => user? <CreateNew anecdotes = {anecdotes} setAnecdotes = {setAnecdotes} setNoti = {setNoti} /> : <Redirect to = '/login' />} />
+				<Route path="/login" render = {() => <Login onLogin={onLogin} />} />
+			</Router>
+			
+			<div>
+			<br />
+				<b>Anecdote app for <a href = 'https://github.com/fullstackopen-2019/routed-anecdotes'>Full Stack Website</a>. See <a href = 'https://github.com/fullstackopen-2019/routed-anecdotes'>{`https://github.com/fullstackopen-2019/routed-anecdotes`}</a> for the source code</b>
+			</div>
+			
+		</div>
+	)
+}
+
+
+
+ReactDOM.render(<App />, document.getElementById('root'))
+
+
+
+7.4 - 7.14 Frontend 
+**********************************************Index.js*******************************************************
+import React from 'react'
+import ReactDOM from 'react-dom'
+import { createStore, combineReducers, applyMiddleware } from 'redux'
+import { Provider } from 'react-redux'
+import thunk from 'redux-thunk'
+import App from './App'
+import blogReducer from './blogReducer'
+import filterReducer from './filterReducer'
+import notificationReducer from './notificationReducer'
+
+
+const reducer = combineReducers({
+	blogs: blogReducer,
+	filter: filterReducer,
+	notification: notificationReducer
+})
+
+
+const store = createStore(reducer, applyMiddleware(thunk))
+
+
+const renderApp = () => {
+	ReactDOM.render(
+	<Provider store = {store}>
+		<App />
+	</Provider>, 
+	document.getElementById('root'))
+}
+
+
+renderApp()
+store.subscribe(renderApp)
+
+************************************************App.js********************************************************
+
+import React, { useState, useEffect } from 'react'
+import { Table, Button, Navbar, Nav } from 'react-bootstrap'
+import {
+	BrowserRouter as Router,
+	Route, Link, Redirect, withRouter
+} from 'react-router-dom'
+import CreateNewComment from './CreateNewComment'
+import Notification from './Notification'
+import Blogs from './Blogs'
+import Users from './Users'
+import User from './User'
+import { initialization, addNewLikes, addNewUser } from './blogReducer'
+import { filterFunction } from './filterReducer'
+import { newNotification, clearNotification } from './notificationReducer'
+import blogService from './blogService'
+import { connect } from 'react-redux'
+import LoginwithHistory from './LoginwithHistory'
+
+
+const App = (props) => {
+	
+	useEffect(() => {
+		blogService.getAll().then(users => props.initialization(users))
+	}, [])
+		
+	const [ user, setUser ] = useState(null)
+	const [ loginVisible, setLoginVisible ] = useState(false)
+	const [ visible, setVisible ] = useState(false) 
+	
+	const login = (user) => {
+		setUser(user)
+	}
+	
+	const blogById = (id) => props.blogs.map(b => b.blogs.find(b => b.id === Number(id)))
+	const userById = (id) => props.blogs.find(b => b.blogs.find(b => b.id === Number(id)))
+	const bloggerById = (id) => props.blogs.find(blogger => blogger.id === Number(id))
+	
+	const Home = () => {
+		const homeStyle = {
+			fontFamily: 'fantasy',
+			position: 'relative',
+			left: '50px'
+		}
+		
+		return(
+			<div>
+				<h1 style = {homeStyle}>Welcome To Blogpost !</h1>
+			</div>
+		)
+	}
+		
+	const Blog = ({ blog, userBlog }) => {
+		const userId = userBlog.id
+		const blogId = blog.id
+		
+		const handleNewLikes = async () => {
+			await blogService.updatedNewLikes(blog, userBlog)
+			props.addNewLikes(userId, blogId)
+		} 
+		
+		return(
+			<div>
+				<h2>{blog.title}</h2>
+				<Table striped>
+					<tbody>
+						<tr>
+							<th>URL</th>
+							<th>Author</th>
+							<th>Likes</th>
+							<th>Button</th>
+							<th>Created By Whom</th>
+						</tr>
+						<tr>
+							<td>{blog.url}</td>
+							<td>{blog.author}</td>
+							<td>{blog.likes} Likes</td>
+							<td><Button variant = 'primary' onClick = {handleNewLikes}>Like</Button></td>
+							<td>added by {userBlog.user}</td>
+						</tr>
+					</tbody>
+				</Table>
+				
+				<br />
+				<br />
+				<h2>Comments</h2>
+				<CreateNewComment blogId = {blog.id} loginVisible = {loginVisible} setLoginVisible = {setLoginVisible} />
+			</div>
+		)
+	}
+
+	const Login = withRouter(LoginwithHistory)
+	
+	const hanldeLogout = () => {
+		setUser(null)
+	}
+	
+	const footerStyle = {
+		fontFamily: 'cursive',
+		position: 'relative',
+		left: '30px',
+		bottom: '10px'
+	}
+
+	return(
+		<div className = 'container'>
+			<Router>
+				<div>
+					<Navbar collapseOnSelect expand="lg" bg="dark" variant="dark">
+					<Navbar.Toggle aria-controls="responsive-navbar-nav" />
+					<Navbar.Collapse id="responsive-navbar-nav">
+						<Nav className="mr-auto">
+						<Nav.Link href="#" as="span">
+					<Link to = '/'>home</Link>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+						</Nav.Link>
+						<Nav.Link href="#" as="span">
+					<Link to = '/blogs'>blogs</Link>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+						</Nav.Link>
+						<Nav.Link href="#" as="span">
+					<Link to = '/users'>users</Link>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+						</Nav.Link>
+						<Nav.Link href="#" as="span">
+					{user
+						? <div>
+						  <br />
+							<b><em>{user} logged in</em></b> &nbsp;&nbsp;&nbsp;
+							<Button variant = 'primary' onClick = {hanldeLogout}>Logout</Button>
+						    <br />
+						  </div>
+						: <Link to = '/login'>login</Link>
+					}
+						</Nav.Link>
+						</Nav>
+					</Navbar.Collapse>
+					</Navbar>
+				</div>
+				
+				<br />
+
+				<Notification />
+				
+				<br />
+		
+				<Route exact path = '/' render ={() => <Home />} />
+				<Route  exact path = '/blogs' render ={() => user ? <Blogs loginVisible = {loginVisible} user = {user} setLoginVisible = {setLoginVisible} visible = {visible} setVisible = {setVisible} /> : <Redirect to = '/login' />} />
+				<Route  exact path = '/blogs/:id' render ={({ match }) => <Blog blog = {blogById(match.params.id).find(b => b !== undefined)} userBlog = {userById(match.params.id)} />} />
+				<Route  exact path = '/users' render ={() => user ? <Users /> : <Redirect to = '/login' />} />
+				<Route  exact path = '/users/:id' render ={({ match }) => <User blogger = {bloggerById(match.params.id)} user = {user} />} />
+				<Route  path = '/login' render ={() => <Login onLogin = {login} loginVisible = {loginVisible}  setLoginVisible = {setLoginVisible} />} />
+			</Router>
+			
+			<br />
+			<br />
+			<br />
+			
+			<div style = {footerStyle}>
+				<em><b>Blog app, Department of Computer Science 2019 created by Daisy</b></em>
+			</div>
+		</div>
+	)
+}
+
+
+const mapStateToProps = (state) => {
+	return {
+		blogs: state.blogs,
+		filter: state.filter
+	}
+}
+
+
+const mapDispatchToProps = {
+	initialization, 
+	addNewLikes, 
+	addNewUser,
+	filterFunction,
+	newNotification, 
+	clearNotification
+}
+
+
+export default connect(
+	mapStateToProps, 
+	mapDispatchToProps
+)(App)
+
+**********************************************LoginwithHistory.js*******************************************************
+
+import React from 'react'
+import { connect } from 'react-redux'
+import { newNotification, clearNotification } from './notificationReducer'
+import { Form, Button } from 'react-bootstrap'
+import { initialization, addNewLikes, addNewUser } from './blogReducer'
+import blogService from './blogService'
+import { filterFunction } from './filterReducer'
+
+
+const LoginwithHistory = (props) => {
+	const hideWhenVisible = { display: props.loginVisible ? 'none' : '' }
+	const showWhenVisible = { display: props.loginVisible ? '' : 'none' }
+	
+	const onSubmit = (event) => {
+		event.preventDefault()
+		const username = event.target.username.value
+		const a = props.blogs.find(b => b.user === username)
+		
+		if (a === undefined) {
+			props.newNotification('Please type your username && password to log in. Thanks!')
+			setTimeout(() => props.clearNotification(), 5000)
+		}
+		
+		props.onLogin(a.user)
+		props.history.push('/')
+		
+		props.newNotification('Login Successfully!')
+		
+		setTimeout(() => props.clearNotification(), 5000)
+	}
+	
+	const handleAddUser = async(event) => {
+		event.persist()
+		const id = props.blogs.length + 1
+		const username = event.target.register.value
+		
+		await blogService.create(username, id)
+		
+		props.addNewUser(username, id)
+		props.newNotification(`${username} new user has registered! Please Login!`)
+
+		setTimeout(() => props.clearNotification(), 5000)
+		
+		event.target.register.value = ''
+	}
+	
+	return(
+		<div>
+		<br />
+		<br />
+			<h1>Login</h1>
+			<Form onSubmit = {onSubmit} className = 'form' >
+				<Form.Group>
+					<Form.Label>Username:</Form.Label> 
+					<Form.Control name = 'username' />
+					<br />
+					<br />
+					<Form.Label>Password:</Form.Label> 
+					<Form.Control />
+					<br />
+					<br />
+					<Button variant="primary" type = 'submit'>Log In</Button>
+				</Form.Group>
+			</Form>
+			
+			<div style = {hideWhenVisible}>
+				<Button variant = 'primary' onClick = {() => props.setLoginVisible(true)}>Register</Button>
+			</div>
+			
+			<div style = {showWhenVisible}> 
+				<Form onSubmit = {handleAddUser}>
+					<Form.Group>
+						<Form.Label>Username:</Form.Label>
+						<Form.Control name = 'register' />
+						<br />
+						<br />
+						<Button variant = 'primary' type = 'submit'>Save</Button>
+						<br />
+						<br />
+						<Button variant = 'primary' onClick = {() => props.setLoginVisible(false)}>Fold</Button>
+					</Form.Group>
+				</Form>
+			</div>
+		</div>
+	)
+}
+
+
+const mapStateToProps = (state) => {
+	return {
+		blogs: state.blogs
+	}
+}
+
+
+const mapDispatchToProps = {
+	initialization, 
+	addNewLikes, 
+	addNewUser,
+	filterFunction,
+	newNotification, 
+	clearNotification
+}
+
+
+export default connect(
+	mapStateToProps, 
+	mapDispatchToProps
+)(LoginwithHistory)
+
+**********************************************BlogFilter.js*******************************************************
+
+import React from 'react'
+import { Form } from 'react-bootstrap'
+import { connect } from 'react-redux'
+import { filterFunction } from './filterReducer'
+
+
+const BlogFilter = (props) => {
+	const handleSearchBlog = (event) => {
+		const filter = event.target.value
+
+		props.filterFunction(filter)
+	}
+	
+	return(
+		<div>
+			<Form>
+				<Form.Group>
+					<Form.Label>Search by Blog Title:</Form.Label> 
+					<Form.Control value = {props.filter} onChange = {handleSearchBlog} />
+				</Form.Group>
+			</Form>
+		</div>
+	)
+}
+
+
+const mapStateToProps = (state) => {
+	return {
+		filter: state.filter
+	}
+}
+
+const mapDispatchToProps = {
+	filterFunction
+}
+
+
+export default connect(
+	mapStateToProps,
+	mapDispatchToProps
+)(BlogFilter)
+
+**********************************************Blogs.js*******************************************************
+
+import React from 'react'
+import { Table, Button } from 'react-bootstrap'
+import { Link } from 'react-router-dom'
+import CreateNewForm from './CreateNewForm'
+import { connect } from 'react-redux'
+import BlogFilter from './BlogFilter'
+
+
+const Blogs = (props) => {	
+	const hide = { display: props.visible ? 'none' : '' } 
+	const show = { display: props.visible ? '' : 'none' } 
+	
+	const filterBlogs = props.filter === ''
+		? props.blogs 
+		: props.blogs.map(user => user.blogs.filter(blog => blog.title.toLowerCase().indexOf(props.filter.toLowerCase()) !== -1))
+		
+	const FilterAll = () => filterBlogs.map(
+		user => user.blogs.map(b => 
+			<tr key = {b.id}>
+				<td><Link to = {`/blogs/${b.id}`}>{b.title}</Link></td>
+			</tr>
+		))
+	
+	const FilterPart = () => filterBlogs.map(
+		n => n.map(blog => 
+			<tr key = {blog.id}>
+					<td><Link to = {`/blogs/${blog.id}`}>{blog.title}</Link></td>
+			</tr>
+		))
+		
+	return(
+		<div>
+			<CreateNewForm loginVisible = {props.loginVisible} user = {props.user} setLoginVisible = {props.setLoginVisible} />
+			<br />
+			<br />
+			<br />
+			<BlogFilter />
+			<br />
+			<br />
+			<br />
+			
+			<div style = {hide}>
+				<h1 onClick = {() => props.setVisible(true)}><abbr title='click to display'>Blog Lists</abbr></h1>
+			</div>
+			
+			<div style = {show}>
+				<Table striped>
+					<tbody>
+						{
+							props.filter === ''
+							? FilterAll()
+							: FilterPart()
+						}	
+					</tbody>
+				</Table>
+				<Button variant = 'primary' onClick = {() => props.setVisible(false)}>Fold</Button>
+			</div>
+		</div>
+	)
+}
+
+
+const mapStateToProps = (state) => {
+	return {
+		blogs: state.blogs,
+		filter: state.filter
+	}
+}
+
+
+export default connect(
+	mapStateToProps,
+	null
+)(Blogs)
+
+
+**********************************************UsersFilter.js*******************************************************
+
+import React from 'react'
+import { Form } from 'react-bootstrap'
+import { connect } from 'react-redux'
+import { filterFunction } from './filterReducer'
+
+
+const UsersFilter = (props) => {
+	const handleSearchUsers = (event) => {
+		const filter = event.target.value
+		
+			props.filterFunction(filter)
+		}
+	
+	return(
+		<div>
+			<Form>
+				<Form.Group>
+					<Form.Label>Search By UserName: </Form.Label>
+					<Form.Control value = {props.filter} onChange = {handleSearchUsers} />
+				</Form.Group>
+			</Form>	
+		</div>
+	)
+}
+
+
+const mapStateToProps = (state) => {
+	return {
+		blogs: state.blogs,
+		filter: state.filter
+	}
+}
+
+
+const mapDispatchToProps = {
+	filterFunction
+}
+
+
+export default connect(
+	mapStateToProps, 
+	mapDispatchToProps
+)(UsersFilter)
+
+**********************************************Users.js*******************************************************
+
+import React from 'react'
+import { Table } from 'react-bootstrap'
+import { Link } from 'react-router-dom'
+import { connect } from 'react-redux'
+import { filterFunction } from './filterReducer'
+import UsersFilter from './UsersFilter'
+
+
+const Users = (props) => {
+	const filterUsers = props.filter === ''
+	? props.blogs
+	: props.blogs.filter(b => b.user.toLowerCase().indexOf(props.filter.toLowerCase()) !== -1)
+
+	return(
+		<div>
+			<UsersFilter />
+			<br />
+			<br />
+			<br />
+			<Table striped>
+			<thead>
+				<tr>
+					<th>&nbsp;</th>
+					<th>Blogs Created</th>
+				</tr>
+			</thead>
+			
+			<tbody>
+			{
+				filterUsers.map(b => {
+					return(
+						<tr key = {b.id}>
+							<td><Link to = {`/users/${b.id}`}>{b.user}</Link></td>
+							<td>{b.blogs.length}</td>
+						</tr>
+					)
+				})
+			}
+			</tbody>
+			</Table>
+		</div>
+	)
+}
+
+
+const mapStateToProps = (state) => {
+	return {
+		blogs: state.blogs,
+		filter: state.filter
+	}
+}
+
+
+const mapDispatchToProps = {
+	filterFunction
+}
+
+
+export default connect(
+	mapStateToProps, 
+	mapDispatchToProps
+)(Users)
+
+
+**********************************************FilterUser.js*******************************************************
+
+import React from 'react'
+import { Form } from 'react-bootstrap'
+import { deleteOldBlog } from './blogReducer'
+import { connect } from 'react-redux'
+import { filterFunction } from './filterReducer'
+
+
+
+const FilterUser = (props) => {
+	const handleSearchUser = (event) => {
+		const filter = event.target.value
+		
+		props.filterFunction(filter)
+	}
+	
+	return(
+		<div>
+			<Form>
+				<Form.Group>
+					<Form.Label>Search By Blogs: </Form.Label>
+					<Form.Control value = {props.filter} onChange = {handleSearchUser} />
+				</Form.Group>
+			</Form>	
+		</div>
+	)
+}
+
+
+const mapStateToProps = (state) => {
+	return {
+		blogs: state.blogs,
+		filter: state.filter
+	}
+}
+
+
+const mapDispatchToProps = {
+	deleteOldBlog,
+	filterFunction
+}
+
+
+export default connect(
+	mapStateToProps, 
+	mapDispatchToProps
+)(FilterUser)
+
+
+**********************************************User.js*******************************************************
+
+import React from 'react'
+import { Table, Button } from 'react-bootstrap'
+import { Link } from 'react-router-dom'
+import blogService from './blogService'
+import { deleteOldBlog } from './blogReducer'
+import { connect } from 'react-redux'
+import { filterFunction } from './filterReducer'
+import FilterUser from './FilterUser'
+
+
+
+const User = (props) => {
+	const filterBlogger = props.filter === ''
+	? props.blogger.blogs
+	: props.blogger.blogs.filter(b => b.title.toLowerCase().indexOf(props.filter.toLowerCase()) !== -1)
+	
+	const handleDeleteBlog = async (id) => {
+		const loggedInUser = props.blogs.find(b => b.user === props.user)
+		const userId = loggedInUser.id
+		const blogId = id 
+				
+		const Result = loggedInUser.blogs.find(b => b.id === blogId)
+		
+		if (Result !== undefined) {
+			const result = window.confirm('Do you want to Delete ?')
+			
+			if (result) {
+				await blogService.deleteBlog(loggedInUser, blogId)
+				props.deleteOldBlog(userId, blogId)
+			}
+		}
+	}
+		
+	return(
+		<div>
+			<FilterUser />
+			<br />
+			<br />
+			<br />
+			<h2>{props.blogger.user} added Blogs</h2>
+			<Table striped>
+				<thead>
+					<tr>
+						<th>Blog Title</th>
+						<th style = {{ display: props.blogger.user === props.user ? '' : 'None' }}>Button</th>
+					</tr>
+				</thead>
+				<tbody>
+					{filterBlogger.map(b => 
+						<tr key = {b.id}>
+							<td><Link to = {`/blogs/${b.id}`}>{b.title}</Link></td>
+							<td style = {{ display: props.blogger.user === props.user ? '' : 'None' }}><Button onClick = {() => handleDeleteBlog(b.id)}>Delete</Button></td>
+						</tr>
+					)}
+				</tbody>
+			</Table>
+		</div>
+	)
+}
+
+
+const mapStateToProps = (state) => {
+	return {
+		blogs: state.blogs,
+		filter: state.filter
+	}
+}
+
+
+const mapDispatchToProps = {
+	deleteOldBlog,
+	filterFunction
+}
+
+
+export default connect(
+	mapStateToProps, 
+	mapDispatchToProps
+)(User)
+
+
+**********************************************Notification.js*******************************************************
+
+import React from 'react'
+import { Alert } from 'react-bootstrap'
+import { connect } from 'react-redux'
+
+
+const Notification = (props) => {		
+	return(
+		<div>
+			{(props.notification && <Alert variant = 'success'> {props.notification} </Alert>)}
+		</div>
+	)
+}
+
+
+const mapStateToProps = (state) => {
+	return {
+		notification: state.notification
+	}
+}
+
+
+export default connect(
+	mapStateToProps, 
+	null
+)(Notification)
+
+**********************************************CreateNewForm.js*******************************************************
+
+import React from 'react'
+import { Form, Button } from 'react-bootstrap'
+import blogService from './blogService'
+import { addNewBlog } from './blogReducer'
+import { newNotification, clearNotification } from './notificationReducer'
+import { connect } from 'react-redux'
+
+
+const CreateNewForm = (props) => {
+	const hideWhenVisible = { display: props.loginVisible ? 'none' : '' }
+	const showWhenVisible = { display: props.loginVisible ? '' : 'none' }
+	
+	const handleAddNew = async(event) => {
+		event.preventDefault()
+		event.persist()
+		const title = event.target.title.value
+		const url = event.target.url.value
+		const author = event.target.author.value
+		
+		const loggedUserInfo = props.blogs.find(b => b.user === props.user)
+		
+		const generateId = () => Number((Math.random() * 1000000).toFixed(0))
+		const blogId = generateId()
+		
+		const updatedUser = await blogService.updatedNewBlog(loggedUserInfo, title, url, author, blogId)
+	
+		const newBlog = updatedUser.blogs.find(b => b.id === blogId)
+
+		props.addNewBlog(updatedUser, newBlog)
+	
+		props.newNotification(`${title} added!`)
+		
+		setTimeout(() => clearNotification(), 5000)
+	
+		event.target.title.value = ''
+		event.target.url.value = ''
+		event.target.author.value = ''
+	}
+
+	return (
+		<div>
+			<div style={hideWhenVisible}>
+			<Button variant = 'primary' onClick={() => props.setLoginVisible(true)}>Create New</Button>
+			</div>
+			
+			<div style={showWhenVisible}>
+				<Form onSubmit = {handleAddNew}>
+					<Form.Group>
+						<Form.Label>Title:</Form.Label> 
+						<Form.Control name = 'title' id = 'title' />
+						<br />
+						<br />
+						<Form.Label>URL:</Form.Label> 
+						<Form.Control name = 'url' id = 'url' />
+						<br />
+						<br />
+						<Form.Label>Author:</Form.Label> 
+						<Form.Control name = 'author' id = 'author' />
+						<br />
+						<br />
+						<Button variant = 'primary' type = 'submit'>Save</Button>
+						<br />
+						<br />
+						<Button variant = 'primary' onClick={() => props.setLoginVisible(false)}>Fold</Button>
+					</Form.Group>
+				</Form>
+			</div>
+		</div>
+	)
+}
+
+
+const mapStateToProps = (state) => {
+	return {
+		blogs: state.blogs
+	}
+}
+
+
+const mapDispatchToProps = {
+	addNewBlog,
+	newNotification, 
+	clearNotification
+}
+
+
+export default connect(
+	mapStateToProps, 
+	mapDispatchToProps
+)(CreateNewForm)
+
+
+**********************************************CreateNewComment.js*******************************************************
+
+import React from 'react'
+import { Form, Button } from 'react-bootstrap'
+import blogService from './blogService'
+import { addNewComment } from './blogReducer'
+import { clearNotification, newNotification } from './notificationReducer' 
+import { connect } from 'react-redux'
+ 
+
+const CreateNewComment = (props) => {
+	const hideWhenVisible = { display: props.loginVisible ? 'none' : '' }
+	const showWhenVisible = { display: props.loginVisible ? '' : 'none' }
+	
+	const generateId = () => Number((Math.random() * 1000000).toFixed(0))
+	
+	const blogId = props.blogId
+	const viewedBlogger = props.blogs.find(user => user.blogs.find(blog => blog.id === blogId))
+	const viewedBlog = viewedBlogger.blogs.find(blog => blog.id === blogId)
+	const userId = viewedBlogger.id
+	
+	const handleNewComment = async (event) => {
+		event.preventDefault()
+		event.persist()
+		const comment = event.target.comment.value
+		
+		const comments = {
+			id: generateId(),
+			comment
+		}
+		
+		await blogService.updatedNewComment(viewedBlogger, viewedBlog, comments)
+
+		props.addNewComment(blogId, userId, comments)
+		
+		props.newNotification('New Comment added!')
+		
+		setTimeout(() => props.clearNotification(), 5000)
+		
+		event.target.comment.value = ''
+	}
+	
+	return (
+		<div>
+			<div style={hideWhenVisible}>
+			<Button variant = 'primary' onClick={() => props.setLoginVisible(true)}>New Comment</Button>
+			</div>
+			
+			<div style={showWhenVisible}>
+				<Form onSubmit = {handleNewComment}>
+					<Form.Group>
+						<Form.Label>Comment:</Form.Label> 
+						<Form.Control name = 'comment' />
+						<br />
+						<br />
+						<Button variant = 'primary' type = 'submit'>Save</Button>
+						<br />
+						<br />
+						<Button variant = 'primary' onClick={() => props.setLoginVisible(false)}>Fold</Button>
+					</Form.Group>
+				</Form>
+			</div>
+			
+			<div>
+				{props.blogs.find(u => u.id === userId)
+					.blogs.find(b => b.id === blogId)
+					.comments.map(c => 
+						<li key = {c.id}>
+							{c.comment}
+						</li>
+				)}
+			</div>
+		</div>
+	)
+}
+
+
+const mapStateToProps = (state) => {
+	return {
+		blogs: state.blogs
+	}
+}
+
+
+const mapDispatchToProps = {
+	addNewComment,
+	newNotification, 
+	clearNotification
+}
+
+
+export default connect(
+	mapStateToProps, 
+	mapDispatchToProps
+)(CreateNewComment)
+
+
+**********************************************blogService.js*******************************************************
+
+import axios from 'axios'
+const baseUrl = 'http://localhost:3001/bloggers'
+
+
+const getAll = async () => {
+	const response = await axios.get(baseUrl)
+	return response.data
+}
+
+
+const create = async (username, id) => {
+	const newUser = {
+		user: username,
+		blogs: [],
+		id,
+	}
+	
+	const response = await axios.post(baseUrl, newUser)
+	return response.data
+}
+
+
+const updatedNewBlog = async (loggedUserInfo, title, url, author, blogId) => {
+	const id = loggedUserInfo.id
+
+	const newObject = {
+		title,
+		url,
+		author,
+		likes: 0,
+		comments: [],
+		id: blogId
+	}
+	
+	const updatedUser = {
+		...loggedUserInfo,
+		blogs: loggedUserInfo.blogs.concat(newObject)
+	}
+	
+	const response = await axios.put(`${baseUrl}/${id}`, updatedUser)
+	return response.data
+}
+
+
+const updatedNewComment = async (viewedBlogger, viewedBlog, comments) => {
+	const id = viewedBlogger.id
+	const blogs = viewedBlogger.blogs
+	
+	const updatedBlog = {
+		...viewedBlog,
+		comments: viewedBlog.comments.concat(comments)
+	}
+	
+	const updatedBlogs = blogs.map(blog => blog.id === updatedBlog.id ? updatedBlog : blog) 
+	
+	const updatedUser = {
+		...viewedBlogger,
+		blogs: updatedBlogs 
+	}
+	
+	const response = await axios.put(`${baseUrl}/${id}`, updatedUser)
+	return response.data
+}
+
+
+const updatedNewLikes = async (blog, blogUser) => {
+	const id = blogUser.id
+	
+	const updatedBlog = {
+		...blog,
+		likes: blog.likes + 1 
+	}
+	
+	const updatedBlogs = blogUser.blogs.map(blog => blog.id === updatedBlog.id ? updatedBlog : blog)
+	
+	const updatedUser = {
+		...blogUser,
+		blogs: updatedBlogs
+	}
+	
+	const response = await axios.put(`${baseUrl}/${id}`, updatedUser)
+	console.log(response.data)
+	return response.data
+}
+
+
+const deleteBlog = async (loggedInUser, blogId) => {
+	const id = loggedInUser.id
+	const changedBlogs = loggedInUser.blogs.filter(blog => blog.id !== blogId)
+	
+	const changedUser = {
+		...loggedInUser,
+		blogs: changedBlogs
+	}
+	
+	const response = await axios.put(`${baseUrl}/${id}`, changedUser)
+	return response.data
+}
+
+
+export default { getAll, create, updatedNewBlog, updatedNewComment, updatedNewLikes, deleteBlog }
+
+**********************************************blogReducer.js*******************************************************
+
+const blogReducer = (state = [], action) => {
+	switch(action.type) {
+		case 'inti_blog':
+			return action.data
+		case 'add_blog':
+			const user_Id = action.data.userId
+			const userinfo = state.find(n => n.id === user_Id)
+			const changed_Blogs = state[user_Id - 1].blogs.concat(action.data.blog)
+			const changed_User = {
+				...userinfo,
+				blogs: changed_Blogs
+			}
+			
+			return state.map(user => user.id === user_Id ? changed_User : user)
+		case 'add_likes':
+			const userId = action.data.userId
+			const blogId = action.data.blogId
+			const user = state.find(n => n.id === userId)
+			const blog = user.blogs.find(n => n.id === blogId)
+			
+			const changedBlog = {
+				...blog,
+				likes: blog.likes + 1
+			}
+			
+			const changedBlogs = user.blogs.map(blog => blog.id === blogId ? changedBlog : blog)
+		
+			const changedUser = {
+				...user,
+				blogs: changedBlogs
+			}
+	
+			return state.map(user => user.id === userId ? changedUser : user)
+		case 'add_comment':
+				const user_id = action.data.userId
+				const blog_id = action.data.blogId
+				const user_info = state.find(n => n.id === user_id)
+				
+				const blog_info = user_info.blogs.find(n => n.id === blog_id)
+				
+				const ChangedBlog = {
+					...blog_info,
+					comments: blog_info.comments.concat(action.data.comments)
+				}
+				
+				const ChangedBlogs = user_info.blogs.map(blog => blog.id === blog_id ? ChangedBlog : blog)
+				
+				const ChangedUser = {
+					...user_info,
+					blogs: ChangedBlogs
+				}
+	
+			return state.map(user => user.id === user_id ? ChangedUser : user)
+		case 'add_user': 
+			return state.concat(action.data)
+		case 'delete_blog':
+			const deletedUser = state.find(u => u.id === action.data.userId)
+			const restBlogs = deletedUser.blogs.filter(b => b.id !== action.data.blogId)
+			const updatedUser = {
+				...deletedUser,
+				blogs: restBlogs
+			}
+		
+			return state.map(user => user.id === action.data.userId ? updatedUser : user)
+		default: 
+		return state
+	}
+}
+
+
+export default blogReducer
+
+
+export const initialization = (users) => {
+	return {
+		type: 'inti_blog', 
+		data: users
+	}
+}
+
+
+export const addNewBlog = (updatedUser, newBlog) => {
+	return {
+		type: 'add_blog',
+		data: {
+			userId: updatedUser.id,
+			blog: newBlog
+		}
+	}
+}
+
+
+export const addNewComment = (blogId, userId, comments) => {
+	return {
+		type: 'add_comment',
+		data: {
+			userId,
+			blogId,
+			comments
+		}
+	}
+}
+
+
+export const addNewLikes = (userId, blogId) => {
+	return {
+		type: 'add_likes',
+		data: {
+			userId, 
+			blogId
+		}
+	}
+}
+
+
+export const addNewUser = (username, id) => {
+	return {
+		type: 'add_user',
+		data: {
+			user: username,
+			blogs: [],
+			id
+		}
+	}
+}
+
+
+export const deleteOldBlog = (userId, blogId) => {
+	return {
+		type: 'delete_blog',
+		data: {
+			userId,
+			blogId
+		}
+	}
+}
+
+**********************************************filterReducer.js*******************************************************
+
+const filterReducer = (state ='', action) => {
+	switch(action.type) {
+		case 'filter':
+		return action.filter
+		default: 
+		return state
+	}
+}
+
+
+export default filterReducer
+
+
+export const filterFunction = (filter) => {
+	return {
+		type: 'filter',
+		filter
+	}
+}
+
+**********************************************notificationReducer.js*******************************************************
+
+const notificationReducer = (state = null, action) => {
+	switch(action.type) {
+		case 'new_noti':
+		return action.message
+		case 'clear':
+		return null
+		default: 
+		return state
+	}
+}
+
+export default notificationReducer 
+
+
+export const clearNotification = () => {
+	return {
+		type: 'clear'
+	}
+}
+
+
+export const newNotification = (message) => {
+	return {
+		type: 'new_noti',
+		message
+	}
+}
+
+
+**********************************************db.json*******************************************************
+
+{
+  "bloggers": [
+    {
+      "user": "Daisy",
+      "blogs": [
+        {
+          "title": "Computer Genius",
+          "url": "https://fjaufyhfdsafasdif",
+          "author": "Sean Zhao",
+          "likes": 7,
+          "comments": [],
+          "id": 2
+        },
+        {
+          "title": "Computer Finance",
+          "url": "https://fjauffsfdsfyhasdif'",
+          "author": "Sean Zhao",
+          "likes": 0,
+          "comments": [],
+          "id": 3
+        },
+        {
+          "title": "How to use JavaScript",
+          "url": "https://dsfygfazff",
+          "author": "Sean Zhao",
+          "likes": 0,
+          "comments": [],
+          "id": 4
+        },
+        {
+          "title": "How to program",
+          "url": "http://hjusdf",
+          "author": "Wong Li",
+          "likes": 0,
+          "comments": [],
+          "id": 600691
+        },
+        {
+          "title": "How to Learn Programming",
+          "url": "http://hjusdf",
+          "author": "Wong Li",
+          "likes": 0,
+          "comments": [],
+          "id": 201774
+        }
+      ],
+      "id": 1
+    },
+    {
+      "user": "Catherine",
+      "blogs": [
+        {
+          "title": "How to write proper codes",
+          "url": "https://fjfadfdfufyhasdif",
+          "author": "Sean Zhao",
+          "likes": 5,
+          "comments": [],
+          "id": 5
+        },
+        {
+          "title": "How to do codes",
+          "url": "https://fjafdsf4ufyhfdsafasdif",
+          "author": "Sean Zhao",
+          "likes": 2,
+          "comments": [],
+          "id": 6
+        },
+        {
+          "title": "CodePen",
+          "url": "https://46547dsfyhasdif",
+          "author": "Sean Zhao",
+          "likes": 8,
+          "comments": [],
+          "id": 7
+        }
+      ],
+      "id": 2
+    },
+    {
+      "user": "Eric",
+      "blogs": [
+        {
+          "title": "The Nature of Code",
+          "url": "https://fsdfsfif",
+          "author": "Sean Zhao",
+          "likes": 0,
+          "comments": [],
+          "id": 8
+        },
+        {
+          "title": "How to use Custom Hooks",
+          "url": "https://fsdfsfif",
+          "author": "Sean Zhao",
+          "likes": 0,
+          "comments": [],
+          "id": 9
+        }
+      ],
+      "id": 3
+    },
+    {
+      "user": "Peter",
+      "blogs": [
+        {
+          "title": "Full Stack Web Development",
+          "url": "https://fsdfsfif",
+          "author": "Sean Zhao",
+          "likes": 8,
+          "comments": [],
+          "id": 10
+        }
+      ],
+      "id": 4
+    },
+    {
+      "user": "Mary",
+      "blogs": [
+        {
+          "title": "How to learn JavaScript Efficiently",
+          "url": "http://hjusdf",
+          "author": "Wong Li",
+          "likes": 0,
+          "comments": [],
+          "id": 538560
+        },
+        {
+          "title": "How to learn Python Efficiently",
+          "url": "http://hjusdf",
+          "author": "Wong Li",
+          "likes": 0,
+          "comments": [],
+          "id": 123163
+        }
+      ],
+      "id": 5
+    }
+  ]
+}
+
+
+
+7.15 ESLint
+
+**********************************************eslintrc.js*******************************************************
+module.exports = {
+  "env": {
+      "browser": true,
+      "es6": true,
+      "jest/globals": true
+  },
+  "extends": [ 
+      "eslint:recommended",
+      "plugin:react/recommended"
+  ],
+  "parserOptions": {
+      "ecmaFeatures": {
+          "jsx": true
+      },
+      "ecmaVersion": 2018,
+      "sourceType": "module"
+  },
+  "plugins": [
+      "react", "jest"
+  ],
+  "rules": {
+      "indent": [
+          "error",
+          2
+      ],
+      "linebreak-style": [
+          "error",
+          "unix"
+      ],
+      "quotes": [
+          "error",
+          "single"
+      ],
+      "semi": [
+          "error",
+          "never"
+      ],
+      "eqeqeq": "error",
+      "no-trailing-spaces": "error",
+      "object-curly-spacing": [
+          "error", "always"
+      ],
+      "arrow-spacing": [
+          "error", { "before": true, "after": true }
+      ],
+      "no-console": 0,
+      "react/prop-types": 0
+  }
+};
+
+**********************************************.eslintignore*******************************************************
+node_modules
+build
+
+**********************************************package.json*******************************************************
+{
+  "name": "part",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "axios": "^0.19.0",
+    "json-server": "^0.15.1",
+    "react": "^16.10.2",
+    "react-bootstrap": "^1.0.0-beta.14",
+    "react-dom": "^16.10.2",
+    "react-redux": "^7.1.1",
+    "react-router-dom": "^5.1.2",
+    "react-scripts": "3.2.0",
+    "redux": "^4.0.4",
+    "redux-devtools-extension": "^2.13.8",
+    "redux-thunk": "^2.3.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "server": "json-server -p3001 src/db.json",
+    "eslint": "eslint .",
+    "eslint:test": "eslint . --fix",
+    "cypress:open": "cypress open",
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "cypress": "^3.6.0",
+    "deep-freeze": "0.0.1",
+    "eslint-plugin-jest": "^23.0.2"
+  }
+}
+
+
+
+7.16 Webpack
+{
+  "name": "webpack-part7",
+  "version": "0.0.1",
+  "description": "practising webpack",
+  "scripts": {
+    "build": "webpack --mode=production",
+    "start": "webpack-dev-server --mode=development"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.6.4",
+    "@babel/preset-env": "^7.6.3",
+    "@babel/preset-react": "^7.6.3",
+    "babel-loader": "^8.0.6",
+    "css-loader": "^3.2.0",
+    "style-loader": "^1.0.0",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.9",
+    "webpack-dev-server": "^3.9.0"
+  },
+  "dependencies": {
+    "@babel/polyfill": "^7.6.0",
+    "axios": "^0.19.0",
+    "react": "^16.11.0",
+    "react-dom": "^16.11.0",
+    "save": "^2.4.0"
+  }
+}
+
+
+
+7.17 - 7.19 End to End Testing
+
+describe('Blog', function() {
+  it('Registered User Login', function() {
+    cy.visit('http://localhost:3000/login')
+    cy.wait(2000)
+    cy.get('.form').within(() => {
+      cy.get('input:first').type('Daisy')
+      cy.get('button').click()
+    })
+  })
+
+  it('Unfold Blog Lists', function() {
+    cy.contains('blogs').click()
+    cy.contains('Blog Lists').click()
+    cy.contains('Fold')
+  })
+
+  it('Logged out and Logged in with another user', function() {
+    cy.contains('Logout').click()
+    cy.get('.form').within(() => {
+      cy.get('input:first').type('Mary')
+      cy.get('button').click()
+    })
+  })
+
+  it('Create New', function() {
+    cy.contains('blogs').click()
+    cy.contains('Create New').click()
+    cy.get('form').within(() => {
+      cy.get('#title').type('How to learn Python Efficiently')
+      cy.get('#url').type('http://hjusdf')
+      cy.get('#author').type('Wong Li')
+      cy.contains('Save').click()
+    })
+  })
+})
+
+
+
+7. 20 Course Feedback
+Very Good!!!
+More Project will be better
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
